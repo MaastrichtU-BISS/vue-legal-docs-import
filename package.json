@@ -1,6 +1,6 @@
 {
   "name": "vue-legal-docs-import",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A Vue component for bringing documents into a platform: pick or drop files, read them in the browser, hand them to the host.",
   "repository": {
     "type": "git",
