@@ -25,6 +25,7 @@
         </div>
 
         <p v-if="reading" class="ldi-status">Reading {{ reading }}…</p>
+        <p v-else-if="preparing" class="ldi-status">Preparing documents…</p>
 
         <!-- What was skipped, and why. Files vanishing without explanation is
              the thing that makes an import feel broken. -->
@@ -55,6 +56,8 @@
             </ul>
         </div>
 
+        <p v-if="error && !documents.length" class="ldi-error ldi-error--standalone">{{ error }}</p>
+
         <div v-if="documents.length && onImport" class="ldi-actions">
             <button type="button" class="ldi-button" :disabled="importing" @click="submit">
                 {{ importing ? 'Importing…' : importLabel }}
@@ -74,13 +77,23 @@
 // download, and does not store them anywhere itself.
 
 import { computed, ref } from 'vue'
-import type { ImportedDocument, ImportFailure, FormatReader } from './types'
+import type {
+    ImportedDocument,
+    ImportFailure,
+    FormatReader,
+    PrepareDocuments,
+} from './types'
 import { acceptAttribute, baseName, defaultReaders, readerFor } from './readers'
 
 const props = withDefaults(
     defineProps<{
         /** Formats to accept. Defaults to plain text. */
         readers?: FormatReader[]
+        /**
+         * Runs over everything read, before it is shown as ready. This is
+         * where a backend step goes — summarising, splitting, cleaning.
+         */
+        onPrepare?: PrepareDocuments
         /** Called with everything read. The host decides what to keep. */
         onImport?: (documents: ImportedDocument[]) => Promise<void> | void
         importLabel?: string
@@ -95,6 +108,7 @@ const documents = defineModel<ImportedDocument[]>('documents', { default: () => 
 const picker = ref<HTMLInputElement | null>(null)
 const dragging = ref(false)
 const reading = ref('')
+const preparing = ref(false)
 const importing = ref(false)
 const error = ref('')
 const failures = ref<ImportFailure[]>([])
@@ -110,6 +124,7 @@ function words(text: string): number {
 async function add(files: File[]): Promise<void> {
     failures.value = []
     error.value = ''
+    const read: ImportedDocument[] = []
 
     for (const file of files) {
         const reader = readerFor(readers.value, file.name)
@@ -119,15 +134,19 @@ async function add(files: File[]): Promise<void> {
         }
         reading.value = file.name
         try {
-            const text = await reader.read(file)
+            const result = await reader.read(file)
+            const text = typeof result === 'string' ? result : result.text
+            const metadata = typeof result === 'string' ? undefined : result.metadata
             if (!text.trim()) {
                 failures.value.push({ name: file.name, reason: 'the file is empty' })
                 continue
             }
-            documents.value = [
-                ...documents.value,
-                { name: baseName(file.name), source: file.name, full_text: text },
-            ]
+            read.push({
+                name: baseName(file.name),
+                source: file.name,
+                full_text: text,
+                ...(metadata ? { metadata } : {}),
+            })
         } catch (e) {
             failures.value.push({
                 name: file.name,
@@ -136,6 +155,30 @@ async function add(files: File[]): Promise<void> {
         } finally {
             reading.value = ''
         }
+    }
+
+    documents.value = [...documents.value, ...(await prepared(read))]
+}
+
+/**
+ * Hands what was read to the host's preparation step, if there is one.
+ *
+ * A failure here keeps the documents as they were read rather than throwing
+ * them away: a summariser being down is not a reason to lose somebody's
+ * upload, and they can see what happened and import the raw text anyway.
+ */
+async function prepared(read: ImportedDocument[]): Promise<ImportedDocument[]> {
+    if (!props.onPrepare || read.length === 0) return read
+    preparing.value = true
+    try {
+        return await props.onPrepare(read)
+    } catch (e) {
+        error.value =
+            (e instanceof Error ? e.message : 'preparing these documents failed') +
+            ' — importing them as they were read'
+        return read
+    } finally {
+        preparing.value = false
     }
 }
 
@@ -336,5 +379,9 @@ async function submit(): Promise<void> {
 .ldi-error {
     color: #b91c1c;
     font-size: 13px;
+}
+
+.ldi-error--standalone {
+    margin: 10px 0 0;
 }
 </style>

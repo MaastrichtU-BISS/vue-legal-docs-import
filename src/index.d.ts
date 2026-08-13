@@ -5,6 +5,14 @@ export interface ImportedDocument {
   name: string;
   source: string;
   full_text: string;
+  /** Whatever a reader or a preparation step attached. Passed through. */
+  metadata?: Record<string, unknown>;
+}
+
+/** What a reader produces. A bare string is the common case. */
+export interface ReadResult {
+  text: string;
+  metadata?: Record<string, unknown>;
 }
 
 /** A file that could not be read, kept so the person importing can see why. */
@@ -20,8 +28,17 @@ export interface ImportFailure {
 export interface FormatReader {
   extensions: string[];
   label: string;
-  read(file: File): Promise<string>;
+  read(file: File): Promise<string | ReadResult>;
 }
+
+/**
+ * Works over everything that was read, before any of it is imported — where a
+ * backend step goes when it is about the text rather than the file format.
+ * Given every document at once so it can be done in one request.
+ */
+export type PrepareDocuments = (
+  documents: ImportedDocument[],
+) => Promise<ImportedDocument[]>;
 
 export declare const textReader: FormatReader;
 export declare const defaultReaders: FormatReader[];
@@ -32,6 +49,11 @@ export declare function baseName(filename: string): string;
 export interface LegalDocsImportProps {
   /** Formats to accept. Defaults to plain text. */
   readers?: FormatReader[];
+  /**
+   * Runs over everything read, before it is shown as ready. A failure here
+   * keeps the documents as they were read rather than losing the upload.
+   */
+  onPrepare?: PrepareDocuments;
   /**
    * Called with everything read. The host decides what to keep — this
    * component stores nothing and sends nothing anywhere.
