@@ -1,0 +1,51 @@
+{
+  "name": "vue-legal-docs-import",
+  "version": "1.0.0",
+  "description": "A Vue component for bringing documents into a platform: pick or drop files, read them in the browser, hand them to the host.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MaastrichtU-BISS/vue-legal-docs-import.git"
+  },
+  "homepage": "https://github.com/MaastrichtU-BISS/vue-legal-docs-import#readme",
+  "bugs": {
+    "url": "https://github.com/MaastrichtU-BISS/vue-legal-docs-import/issues"
+  },
+  "type": "module",
+  "main": "./dist/vue-legal-docs-import.umd.js",
+  "module": "./dist/vue-legal-docs-import.es.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/vue-legal-docs-import.es.js",
+      "require": "./dist/vue-legal-docs-import.umd.js"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build && node scripts/copy-types.mjs",
+    "dev": "vite build --watch",
+    "type-check": "vue-tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "legal",
+    "vue",
+    "import",
+    "upload"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "vue": "^3.4.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^5.2.0",
+    "vue": "^3.4.0",
+    "vue-tsc": "^2.0.0"
+  }
+}

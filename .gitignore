@@ -1,0 +1,8 @@
+node_modules
+dist
+.DS_Store
+*.log
+
+# A lockfile pins the maintainer's own installs and nothing else — consumers
+# of a published library resolve from the ranges in package.json.
+package-lock.json
