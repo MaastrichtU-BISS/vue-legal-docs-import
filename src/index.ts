@@ -10,7 +10,14 @@ export type {
   ReadResult,
   PrepareDocuments,
 } from './components/types'
-export { textReader, defaultReaders, readerFor, extensionOf, baseName } from './components/readers'
+export {
+  textReader,
+  defaultReaders,
+  readerFor,
+  extensionOf,
+  baseName,
+  normalise,
+} from './components/readers'
 
 export const VueLegalDocsImportPlugin: Plugin = {
   install(app: App) {

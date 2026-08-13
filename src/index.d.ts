@@ -45,6 +45,8 @@ export declare const defaultReaders: FormatReader[];
 export declare function readerFor(readers: FormatReader[], filename: string): FormatReader | undefined;
 export declare function extensionOf(filename: string): string;
 export declare function baseName(filename: string): string;
+/** Strips a BOM and makes line endings LF, so offsets are stable. */
+export declare function normalise(text: string): string;
 
 export interface LegalDocsImportProps {
   /** Formats to accept. Defaults to plain text. */

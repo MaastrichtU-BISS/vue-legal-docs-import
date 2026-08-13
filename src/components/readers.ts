@@ -12,8 +12,26 @@ export const textReader: FormatReader = {
   extensions: ['.txt', '.text', '.md'],
   label: 'Text files',
   async read(file: File): Promise<string> {
-    return file.text()
+    return normalise(await file.text())
   },
+}
+
+/**
+ * Makes text that annotates predictably, wherever it was read.
+ *
+ * Annotation offsets are character positions into the stored text. A file
+ * saved on Windows carries CRLF, so every line before an annotation shifts it
+ * by one against the same document read anywhere else — and a byte order mark
+ * pushes the whole document along by one invisible character.
+ *
+ * A host that reads other formats on a server has to do the same thing there,
+ * or the same document will land differently depending on which path it took.
+ */
+export function normalise(text: string): string {
+  return text
+    .replace(/^\ufeff/, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
 }
 
 export const defaultReaders: FormatReader[] = [textReader]
