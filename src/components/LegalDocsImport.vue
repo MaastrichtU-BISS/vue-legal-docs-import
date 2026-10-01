@@ -15,7 +15,18 @@
                 :accept="accept"
                 @change="onPick"
             />
-            <p class="ldi-drop-title">
+            <p v-if="autoImport && onImport" class="ldi-drop-title">
+                <button
+                    type="button"
+                    class="ldi-button"
+                    :disabled="busy"
+                    @click="picker?.click()"
+                >
+                    {{ importLabel }}
+                </button>
+                <span class="ldi-drop-or">or drop files here</span>
+            </p>
+            <p v-else class="ldi-drop-title">
                 <button type="button" class="ldi-link" @click="picker?.click()">
                     Choose files
                 </button>
@@ -26,6 +37,7 @@
 
         <p v-if="reading" class="ldi-status">Reading {{ reading }}…</p>
         <p v-else-if="preparing" class="ldi-status">Preparing documents…</p>
+        <p v-else-if="importing" class="ldi-status">Importing…</p>
 
         <!-- What was skipped, and why. Files vanishing without explanation is
              the thing that makes an import feel broken. -->
@@ -35,7 +47,7 @@
             </li>
         </ul>
 
-        <div v-if="documents.length" class="ldi-list">
+        <div v-if="documents.length && !(autoImport && importing)" class="ldi-list">
             <div class="ldi-list-head">
                 <span>{{ documents.length }} document{{ documents.length === 1 ? '' : 's' }} ready</span>
                 <button type="button" class="ldi-link" @click="clear">Clear</button>
@@ -58,7 +70,7 @@
 
         <p v-if="error && !documents.length" class="ldi-error ldi-error--standalone">{{ error }}</p>
 
-        <div v-if="documents.length && onImport" class="ldi-actions">
+        <div v-if="documents.length && onImport && !(autoImport && importing)" class="ldi-actions">
             <button type="button" class="ldi-button" :disabled="importing" @click="submit">
                 {{ importing ? 'Importing…' : importLabel }}
             </button>
@@ -99,9 +111,21 @@ const props = withDefaults(
         importLabel?: string
         /** Clear the list once the host has taken them. */
         clearOnImport?: boolean
+        /**
+         * Import as soon as the files are read: one button that picks and
+         * imports, with no review list in between. A failed import leaves the
+         * documents listed with the usual button, so nothing has to be picked
+         * twice. Needs onImport.
+         */
+        autoImport?: boolean
     }>(),
-    { importLabel: 'Import documents', clearOnImport: true },
+    { importLabel: 'Import documents', clearOnImport: true, autoImport: false },
 )
+
+const emit = defineEmits<{
+    /** The host's onImport resolved; these are the documents it took. */
+    imported: [documents: ImportedDocument[]]
+}>()
 
 const documents = defineModel<ImportedDocument[]>('documents', { default: () => [] })
 
@@ -112,6 +136,7 @@ const preparing = ref(false)
 const importing = ref(false)
 const error = ref('')
 const failures = ref<ImportFailure[]>([])
+const busy = computed(() => Boolean(reading.value) || preparing.value || importing.value)
 
 const readers = computed(() => props.readers ?? defaultReaders)
 const accept = computed(() => acceptAttribute(readers.value))
@@ -158,6 +183,7 @@ async function add(files: File[]): Promise<void> {
     }
 
     documents.value = [...documents.value, ...(await prepared(read))]
+    if (props.autoImport && props.onImport && documents.value.length) await submit()
 }
 
 /**
@@ -208,9 +234,14 @@ async function submit(): Promise<void> {
     if (!props.onImport) return
     importing.value = true
     error.value = ''
+    const taken = documents.value
     try {
-        await props.onImport(documents.value)
-        if (props.clearOnImport) clear()
+        await props.onImport(taken)
+        emit('imported', taken)
+        // Auto-import has no list to keep: the reasons files were skipped stay
+        // visible, the documents that went through do not.
+        if (props.autoImport) documents.value = []
+        else if (props.clearOnImport) clear()
     } catch (e) {
         error.value = e instanceof Error ? e.message : 'could not import these documents'
     } finally {
@@ -255,6 +286,12 @@ async function submit(): Promise<void> {
     margin: 0;
     font-size: 14px;
     color: #1f2937;
+}
+
+.ldi-drop-or {
+    margin-left: 10px;
+    color: #6b7280;
+    font-size: 13px;
 }
 
 .ldi-drop-hint {

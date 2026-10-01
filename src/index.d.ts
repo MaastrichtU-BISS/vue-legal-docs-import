@@ -63,6 +63,9 @@ export interface LegalDocsImportProps {
   onImport?: (documents: ImportedDocument[]) => Promise<void> | void;
   importLabel?: string;
   clearOnImport?: boolean;
+  /** Import as soon as files are read — one button, no review list. Needs onImport. */
+  autoImport?: boolean;
+  onImported?: (documents: ImportedDocument[]) => void;
   /** v-model:documents, for a host that would rather drive the list itself. */
   documents?: ImportedDocument[];
 }

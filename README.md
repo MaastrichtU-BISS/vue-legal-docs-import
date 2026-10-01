@@ -144,4 +144,5 @@ broken.
 | `onImport` | `(docs) => Promise<void>` | Called with everything read. Without it, no button is shown and `v-model:documents` is how the host reads the list. |
 | `importLabel` | `string` | The button's text. |
 | `clearOnImport` | `boolean` | Empty the list once the host has taken them. Default `true`. |
+| `autoImport` | `boolean` | Import as soon as files are read: one button picks and imports, no review list. A failed import leaves the list and button so nothing is picked twice. Default `false`. |
 | `v-model:documents` | `ImportedDocument[]` | The list, for a host that would rather drive it. |
